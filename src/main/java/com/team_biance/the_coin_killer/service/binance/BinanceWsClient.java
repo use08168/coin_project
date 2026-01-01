@@ -7,7 +7,8 @@ import com.team_biance.the_coin_killer.dao.KlineDao;
 import com.team_biance.the_coin_killer.dao.MarkDao;
 import com.team_biance.the_coin_killer.util.TimeUtil;
 import okhttp3.*;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -16,10 +17,12 @@ import java.time.Instant;
 @Service
 public class BinanceWsClient {
 
-    @Value("${binance.futures.ws-base}")
+    private static final Logger log = LoggerFactory.getLogger(BinanceWsClient.class);
+
+    @Value("${binance.futures.ws-base:wss://fstream.binance.com}")
     private String wsBase;
 
-    @Value("${binance.symbol}")
+    @Value("${binance.symbol:BTCUSDT}")
     private String symbol;
 
     private final ObjectMapper om;
@@ -28,6 +31,7 @@ public class BinanceWsClient {
     private final ForceOrderDao forceOrderDao;
     private final DepthCache depthCache;
     private final AggTradeAggregator aggTradeAggregator;
+    private final BinanceIngestState state;
 
     private OkHttpClient client;
     private WebSocket ws;
@@ -37,23 +41,22 @@ public class BinanceWsClient {
             MarkDao markDao,
             ForceOrderDao forceOrderDao,
             DepthCache depthCache,
-            AggTradeAggregator aggTradeAggregator) {
+            AggTradeAggregator aggTradeAggregator,
+            BinanceIngestState state) {
         this.om = om;
         this.klineDao = klineDao;
         this.markDao = markDao;
         this.forceOrderDao = forceOrderDao;
         this.depthCache = depthCache;
         this.aggTradeAggregator = aggTradeAggregator;
+        this.state = state;
     }
 
-    public void start() {
-        if (client == null) {
+    public synchronized void start() {
+        if (client == null)
             client = new OkHttpClient.Builder().build();
-        }
 
         String s = symbol.toLowerCase();
-
-        // Combined Streams
         String url = wsBase + "/stream?streams="
                 + s + "@kline_1m/"
                 + s + "@markPrice@1s/"
@@ -61,23 +64,44 @@ public class BinanceWsClient {
                 + s + "@depth20@250ms/"
                 + s + "@aggTrade";
 
-        Request req = new Request.Builder().url(url).build();
+        log.info("[BINANCE] WS start url={}", url);
 
+        Request req = new Request.Builder().url(url).build();
         ws = client.newWebSocket(req, new WebSocketListener() {
             @Override
             public void onOpen(WebSocket webSocket, Response response) {
+                log.info("[BINANCE] WS opened");
             }
 
             @Override
             public void onMessage(WebSocket webSocket, String text) {
+                state.wsMsgTotal.incrementAndGet();
+                state.lastWsMsgAt.set(Instant.now());
                 handleMessage(text);
             }
 
             @Override
+            public void onClosed(WebSocket webSocket, int code, String reason) {
+                log.warn("[BINANCE] WS closed code={} reason={}", code, reason);
+            }
+
+            @Override
             public void onFailure(WebSocket webSocket, Throwable t, Response response) {
-                // 재연결은 bootstrap에서 주기적으로 상태 확인하며 다시 start하도록(다음 단계에서 개선)
+                String msg = "[BINANCE] WS failure: " + (t == null ? "null" : t.getMessage());
+                log.error(msg, t);
+                state.lastError.set(msg);
             }
         });
+    }
+
+    public synchronized void restart() {
+        try {
+            if (ws != null)
+                ws.close(1000, "restart");
+        } catch (Exception ignore) {
+        }
+        ws = null;
+        start();
     }
 
     private void handleMessage(String text) {
@@ -90,13 +114,29 @@ public class BinanceWsClient {
             String e = data.get("e").asText();
 
             switch (e) {
-                case "kline" -> handleKline(data);
-                case "markPriceUpdate" -> handleMark(data);
-                case "forceOrder" -> handleForceOrder(data);
-                case "depthUpdate" -> handleDepth(data);
-                case "aggTrade" -> handleAggTrade(data);
+                case "kline" -> {
+                    state.wsKlineMsg.incrementAndGet();
+                    handleKline(data);
+                }
+                case "markPriceUpdate" -> {
+                    state.wsMarkMsg.incrementAndGet();
+                    handleMark(data);
+                }
+                case "forceOrder" -> {
+                    state.wsForceOrderMsg.incrementAndGet();
+                    handleForceOrder(data);
+                }
+                case "depthUpdate" -> {
+                    state.wsDepthMsg.incrementAndGet();
+                    handleDepth(data);
+                }
+                case "aggTrade" -> {
+                    state.wsAggTradeMsg.incrementAndGet();
+                    handleAggTrade(data);
+                }
             }
-        } catch (Exception ignore) {
+        } catch (Exception ex) {
+            state.lastError.set("handleMessage error: " + ex.getMessage());
         }
     }
 
@@ -107,10 +147,9 @@ public class BinanceWsClient {
 
         boolean closed = k.get("x").asBoolean(false);
         if (!closed)
-            return; // 1분 봉 마감 시점만 저장
+            return;
 
-        long t = k.get("t").asLong(); // open time
-        Instant tsUtc = TimeUtil.fromEpochMs(t);
+        Instant tsUtc = TimeUtil.fromEpochMs(k.get("t").asLong());
 
         double open = k.get("o").asDouble();
         double high = k.get("h").asDouble();
@@ -127,8 +166,7 @@ public class BinanceWsClient {
     }
 
     private void handleMark(JsonNode data) {
-        long E = data.get("E").asLong();
-        Instant tsUtc = TimeUtil.fromEpochMs(E);
+        Instant tsUtc = TimeUtil.fromEpochMs(data.get("E").asLong());
 
         double mark = data.get("p").asDouble();
         Double index = data.hasNonNull("i") ? data.get("i").asDouble() : null;
@@ -139,14 +177,13 @@ public class BinanceWsClient {
     }
 
     private void handleForceOrder(JsonNode data) {
-        long E = data.get("E").asLong();
-        Instant eventUtc = TimeUtil.fromEpochMs(E);
+        Instant eventUtc = TimeUtil.fromEpochMs(data.get("E").asLong());
 
         JsonNode o = data.get("o");
         if (o == null)
             return;
 
-        String side = o.get("S").asText(); // BUY/SELL
+        String side = o.get("S").asText();
         String status = o.hasNonNull("X") ? o.get("X").asText() : null;
         double price = o.get("p").asDouble();
         double qty = o.get("q").asDouble();
@@ -155,21 +192,19 @@ public class BinanceWsClient {
     }
 
     private void handleDepth(JsonNode data) {
-        long E = data.get("E").asLong();
-        Instant eventUtc = TimeUtil.fromEpochMs(E);
+        Instant eventUtc = TimeUtil.fromEpochMs(data.get("E").asLong());
 
         JsonNode bids = data.get("b");
         JsonNode asks = data.get("a");
         if (bids == null || asks == null)
             return;
 
+        state.lastDepthEventAt.set(eventUtc);
         depthCache.set(new DepthCache.DepthData(eventUtc, bids, asks));
     }
 
     private void handleAggTrade(JsonNode data) {
-        long E = data.get("E").asLong();
-        Instant eventUtc = TimeUtil.fromEpochMs(E);
-
+        Instant eventUtc = TimeUtil.fromEpochMs(data.get("E").asLong());
         double price = data.get("p").asDouble();
         double qty = data.get("q").asDouble();
         boolean buyerIsMaker = data.get("m").asBoolean();
