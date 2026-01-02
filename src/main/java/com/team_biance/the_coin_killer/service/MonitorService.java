@@ -2,7 +2,12 @@ package com.team_biance.the_coin_killer.service;
 
 import com.team_biance.the_coin_killer.dto.TableStatus;
 import com.team_biance.the_coin_killer.mapper.MonitorMapper;
-import com.team_biance.the_coin_killer.model.*;
+import com.team_biance.the_coin_killer.model.FAggTrade1m;
+import com.team_biance.the_coin_killer.model.FDepthSnapshot1s;
+import com.team_biance.the_coin_killer.model.FForceOrder;
+import com.team_biance.the_coin_killer.model.FKline1m;
+import com.team_biance.the_coin_killer.model.FMark1s;
+import com.team_biance.the_coin_killer.model.FeatureMinute;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -20,6 +25,9 @@ public class MonitorService {
         this.monitorMapper = monitorMapper;
     }
 
+    // =========================
+    // Dashboard: Table Statuses
+    // =========================
     public List<TableStatus> getTableStatuses() {
         LocalDateTime nowUtc = LocalDateTime.now(ZoneOffset.UTC);
 
@@ -40,6 +48,9 @@ public class MonitorService {
         return list;
     }
 
+    // =========================
+    // Dashboard: Recent Data
+    // =========================
     public DashboardRecentData getRecentData(int limit) {
         DashboardRecentData d = new DashboardRecentData();
         d.klines = monitorMapper.recentKlines(limit);
@@ -51,9 +62,110 @@ public class MonitorService {
         return d;
     }
 
-    // -------------------------
-    // 내부 헬퍼 / DTO
-    // -------------------------
+    /**
+     * ✅ MonitorController에서 MonitorService.DashboardRecentData 로 타입 참조 가능하게
+     * public static 으로 선언
+     */
+    public static class DashboardRecentData {
+        public List<FKline1m> klines;
+        public List<FMark1s> marks;
+        public List<FDepthSnapshot1s> depths;
+        public List<FForceOrder> forceOrders;
+        public List<FAggTrade1m> aggTrades;
+        public List<FeatureMinute> featureMinutes;
+    }
+
+    // =========================
+    // Compare: Realtime Snapshot API
+    // GET /api/monitor/realtime
+    // =========================
+    public RealtimeResponse getRealtimeSnapshot() {
+        LocalDateTime nowUtc = LocalDateTime.now(ZoneOffset.UTC);
+
+        FKline1m k = firstOrNull(monitorMapper.recentKlines(1));
+        FMark1s m = firstOrNull(monitorMapper.recentMarks(1));
+        FDepthSnapshot1s d = firstOrNull(monitorMapper.recentDepths(1));
+        FeatureMinute f = firstOrNull(monitorMapper.recentFeatureMinutes(1));
+
+        RealtimeResponse.Kline kDto = null;
+        if (k != null) {
+            kDto = new RealtimeResponse.Kline(
+                    k.getTsUtc(),
+                    nz(k.getOpen()),
+                    nz(k.getHigh()),
+                    nz(k.getLow()),
+                    nz(k.getClose()),
+                    nz(k.getVolume()),
+                    nzInt(k.getTradeCount()));
+        }
+
+        RealtimeResponse.Mark markDto = null;
+        if (m != null) {
+            markDto = new RealtimeResponse.Mark(
+                    nz(m.getMarkPrice()),
+                    nzNullable(m.getIndexPrice()),
+                    nzNullable(m.getFundingRate()));
+        }
+
+        RealtimeResponse.Depth depthDto = null;
+        if (d != null) {
+            depthDto = new RealtimeResponse.Depth(
+                    nz(d.getMidPrice()),
+                    nz(d.getSpreadBps()),
+                    nz(d.getImbalanceTop20()));
+        }
+
+        RealtimeResponse.Feature featDto = null;
+        if (f != null) {
+            featDto = new RealtimeResponse.Feature(
+                    nz(f.getRet1mLog()),
+                    nz(f.getRv15m()),
+                    nz(f.getCvd15m()),
+                    nz(f.getBuyRatio1m()));
+        }
+
+        return new RealtimeResponse(nowUtc, kDto, markDto, depthDto, featDto);
+    }
+
+    public record RealtimeResponse(
+            LocalDateTime timestamp,
+            Kline kline,
+            Mark mark,
+            Depth depth,
+            Feature feature) {
+        public record Kline(
+                LocalDateTime tsUtc,
+                double open,
+                double high,
+                double low,
+                double close,
+                double volume,
+                int tradeCount) {
+        }
+
+        public record Mark(
+                double markPrice,
+                Double indexPrice,
+                Double fundingRate) {
+        }
+
+        public record Depth(
+                double midPrice,
+                double spreadBps,
+                double imbalance) {
+        }
+
+        public record Feature(
+                double ret1mLog,
+                double rv15m,
+                double cvd15m,
+                double buyRatio1m) {
+        }
+    }
+
+    // =========================
+    // Internal Helpers
+    // =========================
 
     private TableStatus buildStatus(String tableName, String displayName, long count, LocalDateTime latest,
             LocalDateTime nowUtc) {
@@ -104,12 +216,28 @@ public class MonitorService {
         return days + "일 전";
     }
 
-    public static class DashboardRecentData {
-        public List<FKline1m> klines;
-        public List<FMark1s> marks;
-        public List<FDepthSnapshot1s> depths;
-        public List<FForceOrder> forceOrders;
-        public List<FAggTrade1m> aggTrades;
-        public List<FeatureMinute> featureMinutes;
+    private static <T> T firstOrNull(List<T> list) {
+        return (list == null || list.isEmpty()) ? null : list.get(0);
+    }
+
+    private static double nz(Double v) {
+        return (v == null) ? 0.0 : v;
+    }
+
+    private static Double nzNullable(Double v) {
+        return v; // null 허용
+    }
+
+    private static int nzInt(Integer v) {
+        return (v == null) ? 0 : v;
+    }
+
+    // 오버로드: 모델에서 primitive를 리턴해도 boxing으로 들어와서 문제 없음
+    private static double nz(double v) {
+        return v;
+    }
+
+    private static int nzInt(int v) {
+        return v;
     }
 }

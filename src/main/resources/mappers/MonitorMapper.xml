@@ -145,20 +145,20 @@
             symbol,
             ts_utc AS tsUtc,
 
-            open_1m AS open1m,
-            high_1m AS high1m,
-            low_1m AS low1m,
+            -- 화면에 쓰는 일부만 조회 (필요 필드만)
             close_1m AS close1m,
-            volume_1m AS volume1m,
-            trade_count_1m AS tradeCount1m,
 
             ret1m_log AS ret1mLog,
             rv15m AS rv15m,
-            vol_z_60m AS volZ60m,
+
+            cvd_15m AS cvd15m,
+            buy_ratio_1m AS buyRatio1m,
+
             mark_spot_bps AS markSpotBps
         FROM feature_minute
         ORDER BY ts_utc DESC
         LIMIT #{limit}
     </select>
+
 
 </mapper>
