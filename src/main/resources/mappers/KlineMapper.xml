@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.team_biance.the_coin_killer.mapper.KlineMapper">
+
+    <insert id="upsert" parameterType="com.team_biance.the_coin_killer.model.FKline1m">
+        INSERT INTO f_kline_1m (
+            symbol, ts_utc,
+            open_, high_, low_, close_,
+            volume_, trade_count,
+            quote_volume, taker_buy_vol, taker_buy_qv
+        ) VALUES (
+            #{symbol}, #{tsUtc},
+            #{open}, #{high}, #{low}, #{close},
+            #{volume}, #{tradeCount},
+            #{quoteVolume}, #{takerBuyVol}, #{takerBuyQv}
+        )
+        ON DUPLICATE KEY UPDATE
+            open_ = #{open},
+            high_ = #{high},
+            low_ = #{low},
+            close_ = #{close},
+            volume_ = #{volume},
+            trade_count = #{tradeCount},
+            quote_volume = #{quoteVolume},
+            taker_buy_vol = #{takerBuyVol},
+            taker_buy_qv = #{takerBuyQv}
+    </insert>
+
+</mapper>

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.team_biance.the_coin_killer.mapper.MarkPriceMapper">
+
+    <insert id="upsert" parameterType="com.team_biance.the_coin_killer.model.FMark1s">
+        INSERT INTO f_mark_1s (
+            symbol, ts_utc,
+            mark_price, index_price,
+            funding_rate, next_funding_utc
+        ) VALUES (
+            #{symbol}, #{tsUtc},
+            #{markPrice}, #{indexPrice},
+            #{fundingRate}, #{nextFundingUtc}
+        )
+        ON DUPLICATE KEY UPDATE
+            mark_price = #{markPrice},
+            index_price = #{indexPrice},
+            funding_rate = #{fundingRate},
+            next_funding_utc = #{nextFundingUtc}
+    </insert>
+
+</mapper>

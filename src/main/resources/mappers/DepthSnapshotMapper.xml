@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.team_biance.the_coin_killer.mapper.DepthSnapshotMapper">
+
+    <insert id="upsert" parameterType="com.team_biance.the_coin_killer.model.FDepthSnapshot1s">
+        INSERT INTO f_depth_snapshot_1s (
+            symbol, ts_utc,
+            best_bid, best_ask, mid_price, spread_bps,
+            depth_bid_sum_top20, depth_ask_sum_top20, imbalance_top20,
+            microprice, microprice_gap_bps,
+            bids_gzip, asks_gzip, compress_algo
+        ) VALUES (
+            #{symbol}, #{tsUtc},
+            #{bestBid}, #{bestAsk}, #{midPrice}, #{spreadBps},
+            #{depthBidSumTop20}, #{depthAskSumTop20}, #{imbalanceTop20},
+            #{microprice}, #{micropriceGapBps},
+            #{bidsGzip, jdbcType=BLOB}, #{asksGzip, jdbcType=BLOB}, #{compressAlgo}
+        )
+        ON DUPLICATE KEY UPDATE
+            best_bid = #{bestBid},
+            best_ask = #{bestAsk},
+            mid_price = #{midPrice},
+            spread_bps = #{spreadBps},
+            depth_bid_sum_top20 = #{depthBidSumTop20},
+            depth_ask_sum_top20 = #{depthAskSumTop20},
+            imbalance_top20 = #{imbalanceTop20},
+            microprice = #{microprice},
+            microprice_gap_bps = #{micropriceGapBps},
+            bids_gzip = #{bidsGzip, jdbcType=BLOB},
+            asks_gzip = #{asksGzip, jdbcType=BLOB},
+            compress_algo = #{compressAlgo}
+    </insert>
+
+</mapper>

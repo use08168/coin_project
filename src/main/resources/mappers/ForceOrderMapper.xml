@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.team_biance.the_coin_killer.mapper.ForceOrderMapper">
+
+    <insert id="insert" parameterType="com.team_biance.the_coin_killer.model.FForceOrder"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO f_forceorder (
+            symbol, event_utc, side, price_, qty_, status_
+        ) VALUES (
+            #{symbol}, #{eventUtc}, #{side}, #{price}, #{qty}, #{status}
+        )
+    </insert>
+
+</mapper>
