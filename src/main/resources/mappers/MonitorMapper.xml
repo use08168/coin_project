@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.team_biance.the_coin_killer.mapper.MonitorMapper">
+
+    <!-- =======================
+         COUNT
+         ======================= -->
+    <select id="countKline" resultType="long">
+        SELECT COUNT(*) FROM f_kline_1m
+    </select>
+
+    <select id="countMark" resultType="long">
+        SELECT COUNT(*) FROM f_mark_1s
+    </select>
+
+    <select id="countDepth" resultType="long">
+        SELECT COUNT(*) FROM f_depth_snapshot_1s
+    </select>
+
+    <select id="countForceOrder" resultType="long">
+        SELECT COUNT(*) FROM f_forceorder
+    </select>
+
+    <select id="countAggTrade" resultType="long">
+        SELECT COUNT(*) FROM f_aggtrade_1m
+    </select>
+
+    <select id="countFeatureMinute" resultType="long">
+        SELECT COUNT(*) FROM feature_minute
+    </select>
+
+    <!-- =======================
+         LATEST TIME
+         ======================= -->
+    <select id="latestKlineTime" resultType="java.time.LocalDateTime">
+        SELECT MAX(ts_utc) FROM f_kline_1m
+    </select>
+
+    <select id="latestMarkTime" resultType="java.time.LocalDateTime">
+        SELECT MAX(ts_utc) FROM f_mark_1s
+    </select>
+
+    <select id="latestDepthTime" resultType="java.time.LocalDateTime">
+        SELECT MAX(ts_utc) FROM f_depth_snapshot_1s
+    </select>
+
+    <select id="latestForceOrderTime" resultType="java.time.LocalDateTime">
+        SELECT MAX(event_utc) FROM f_forceorder
+    </select>
+
+    <select id="latestAggTradeTime" resultType="java.time.LocalDateTime">
+        SELECT MAX(ts_utc) FROM f_aggtrade_1m
+    </select>
+
+    <select id="latestFeatureMinuteTime" resultType="java.time.LocalDateTime">
+        SELECT MAX(ts_utc) FROM feature_minute
+    </select>
+
+    <!-- =======================
+         RECENT N
+         (alias로 Java 필드명에 맞춰 안전하게 매핑)
+         ======================= -->
+
+    <select id="recentKlines" resultType="com.team_biance.the_coin_killer.model.FKline1m">
+        SELECT
+            symbol,
+            ts_utc AS tsUtc,
+            open_  AS open,
+            high_  AS high,
+            low_   AS low,
+            close_ AS close,
+            volume_ AS volume,
+            trade_count AS tradeCount,
+            quote_volume AS quoteVolume,
+            taker_buy_vol AS takerBuyVol,
+            taker_buy_qv AS takerBuyQv
+        FROM f_kline_1m
+        ORDER BY ts_utc DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="recentMarks" resultType="com.team_biance.the_coin_killer.model.FMark1s">
+        SELECT
+            symbol,
+            ts_utc AS tsUtc,
+            mark_price AS markPrice,
+            index_price AS indexPrice,
+            funding_rate AS fundingRate,
+            next_funding_utc AS nextFundingUtc
+        FROM f_mark_1s
+        ORDER BY ts_utc DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="recentDepths" resultType="com.team_biance.the_coin_killer.model.FDepthSnapshot1s">
+        SELECT
+            symbol,
+            ts_utc AS tsUtc,
+            best_bid AS bestBid,
+            best_ask AS bestAsk,
+            mid_price AS midPrice,
+            spread_bps AS spreadBps,
+            depth_bid_sum_top20 AS depthBidSumTop20,
+            depth_ask_sum_top20 AS depthAskSumTop20,
+            imbalance_top20 AS imbalanceTop20,
+            microprice AS microprice,
+            microprice_gap_bps AS micropriceGapBps
+        FROM f_depth_snapshot_1s
+        ORDER BY ts_utc DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="recentForceOrders" resultType="com.team_biance.the_coin_killer.model.FForceOrder">
+        SELECT
+            id,
+            symbol,
+            event_utc AS eventUtc,
+            side,
+            price_ AS price,
+            qty_ AS qty,
+            status_ AS status
+        FROM f_forceorder
+        ORDER BY event_utc DESC, id DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="recentAggTrades" resultType="com.team_biance.the_coin_killer.model.FAggTrade1m">
+        SELECT
+            symbol,
+            ts_utc AS tsUtc,
+            taker_buy_qty AS takerBuyQty,
+            taker_sell_qty AS takerSellQty,
+            trade_count AS tradeCount,
+            vwap_price AS vwapPrice
+        FROM f_aggtrade_1m
+        ORDER BY ts_utc DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="recentFeatureMinutes" resultType="com.team_biance.the_coin_killer.model.FeatureMinute">
+        SELECT
+            symbol,
+            ts_utc AS tsUtc,
+
+            open_1m AS open1m,
+            high_1m AS high1m,
+            low_1m AS low1m,
+            close_1m AS close1m,
+            volume_1m AS volume1m,
+            trade_count_1m AS tradeCount1m,
+
+            ret1m_log AS ret1mLog,
+            rv15m AS rv15m,
+            vol_z_60m AS volZ60m,
+            mark_spot_bps AS markSpotBps
+        FROM feature_minute
+        ORDER BY ts_utc DESC
+        LIMIT #{limit}
+    </select>
+
+</mapper>
