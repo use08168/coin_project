@@ -7,13 +7,14 @@ from utils import log
 
 
 # feature_minute 기본 30개 피처 목록 (요청 명세 기준)
+# feature_minute 기본 30개 피처 목록 (실제 DB 컬럼명 기준)
 BASE_FEATURES = [
     "open_1m", "high_1m", "low_1m", "close_1m", "volume_1m", "trade_count_1m",
     "ret1m_log", "ret5m_log", "ret15m_log", "range_bps_1m",
     "rv15m", "rv60m",
     "vol_z_60m", "rvol_tod", "avg_trade_size_1m", "vwap_gap_bps",
     "taker_buy_qty_1m", "taker_sell_qty_1m", "buy_ratio_1m", "cvd_1m", "cvd_15m",
-    "mid_price_1s", "spread_bps_1s", "depth_bid_sum_top20", "depth_ask_sum_top20", "imbalance_top20", "microprice_gap_bps",
+    "mid_price", "spread_bps", "imbalance_top20", "microprice_gap_bps",
     "mark_spot_bps", "oi_chg_1m", "liq_count_1m",
 ]
 

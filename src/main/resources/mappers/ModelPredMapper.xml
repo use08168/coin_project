@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.team_biance.the_coin_killer.mapper.ModelPredMapper">
+
+    <insert id="insertPrediction" parameterType="com.team_biance.the_coin_killer.model.ModelPred60m">
+        INSERT INTO model_pred_60m
+        (symbol, ts_utc, current_close, prediction, probability, model_version)
+        VALUES
+        (#{symbol}, #{tsUtc}, #{currentClose}, #{prediction}, #{probability}, #{modelVersion})
+        ON DUPLICATE KEY UPDATE
+            current_close = VALUES(current_close),
+            prediction = VALUES(prediction),
+            probability = VALUES(probability),
+            model_version = VALUES(model_version)
+    </insert>
+
+    <select id="recentPredictions" resultType="com.team_biance.the_coin_killer.model.ModelPred60m">
+        SELECT
+            id,
+            symbol,
+            ts_utc AS tsUtc,
+            current_close AS currentClose,
+            prediction,
+            probability,
+            model_version AS modelVersion,
+            created_at AS createdAt
+        FROM model_pred_60m
+        WHERE symbol = #{symbol}
+        ORDER BY ts_utc DESC
+        LIMIT #{limit}
+    </select>
+
+</mapper>
