@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.team_biance.the_coin_killer.mapper.FeatureSourceMapper">
+
+    <!-- f_kline_1m: FKline1m(open/high/low/close/volume/tradeCount...)에 맞게 alias -->
+    <select id="getKlineAt" resultType="com.team_biance.the_coin_killer.model.FKline1m">
+        SELECT
+            symbol,
+            ts_utc AS tsUtc,
+            open_  AS open,
+            high_  AS high,
+            low_   AS low,
+            close_ AS close,
+            volume_ AS volume,
+            trade_count AS tradeCount,
+            quote_volume AS quoteVolume,
+            taker_buy_vol AS takerBuyVol,
+            taker_buy_qv AS takerBuyQv
+        FROM f_kline_1m
+        WHERE symbol = #{symbol}
+          AND ts_utc = #{tsUtc}
+        LIMIT 1
+    </select>
+
+    <select id="getKlineRange" resultType="com.team_biance.the_coin_killer.model.FKline1m">
+        SELECT
+            symbol,
+            ts_utc AS tsUtc,
+            open_  AS open,
+            high_  AS high,
+            low_   AS low,
+            close_ AS close,
+            volume_ AS volume,
+            trade_count AS tradeCount,
+            quote_volume AS quoteVolume,
+            taker_buy_vol AS takerBuyVol,
+            taker_buy_qv AS takerBuyQv
+        FROM f_kline_1m
+        WHERE symbol = #{symbol}
+          AND ts_utc >= #{from}
+          AND ts_utc < #{to}
+        ORDER BY ts_utc ASC
+    </select>
+
+    <!-- depth: 해당 시각(beforeTs) 이전 가장 최신 1건 -->
+    <select id="getLatestDepthBefore" resultType="com.team_biance.the_coin_killer.model.FDepthSnapshot1s">
+        SELECT
+            symbol,
+            ts_utc AS tsUtc,
+            best_bid AS bestBid,
+            best_ask AS bestAsk,
+            mid_price AS midPrice,
+            spread_bps AS spreadBps,
+            depth_bid_sum_top20 AS depthBidSumTop20,
+            depth_ask_sum_top20 AS depthAskSumTop20,
+            imbalance_top20 AS imbalanceTop20,
+            microprice AS microprice,
+            microprice_gap_bps AS micropriceGapBps
+        FROM f_depth_snapshot_1s
+        WHERE symbol = #{symbol}
+          AND ts_utc < #{beforeTs}
+        ORDER BY ts_utc DESC
+        LIMIT 1
+    </select>
+
+    <!-- mark: 해당 시각(beforeTs) 이전 가장 최신 1건 -->
+    <select id="getLatestMarkBefore" resultType="com.team_biance.the_coin_killer.model.FMark1s">
+        SELECT
+            symbol,
+            ts_utc AS tsUtc,
+            mark_price AS markPrice,
+            index_price AS indexPrice,
+            funding_rate AS fundingRate,
+            next_funding_utc AS nextFundingUtc
+        FROM f_mark_1s
+        WHERE symbol = #{symbol}
+          AND ts_utc < #{beforeTs}
+        ORDER BY ts_utc DESC
+        LIMIT 1
+    </select>
+
+    <select id="getAggTradeAt" resultType="com.team_biance.the_coin_killer.model.FAggTrade1m">
+        SELECT
+            symbol,
+            ts_utc AS tsUtc,
+            taker_buy_qty AS takerBuyQty,
+            taker_sell_qty AS takerSellQty,
+            trade_count AS tradeCount,
+            vwap_price AS vwapPrice
+        FROM f_aggtrade_1m
+        WHERE symbol = #{symbol}
+          AND ts_utc = #{tsUtc}
+        LIMIT 1
+    </select>
+
+    <select id="getAggTradeRange" resultType="com.team_biance.the_coin_killer.model.FAggTrade1m">
+        SELECT
+            symbol,
+            ts_utc AS tsUtc,
+            taker_buy_qty AS takerBuyQty,
+            taker_sell_qty AS takerSellQty,
+            trade_count AS tradeCount,
+            vwap_price AS vwapPrice
+        FROM f_aggtrade_1m
+        WHERE symbol = #{symbol}
+          AND ts_utc >= #{from}
+          AND ts_utc < #{to}
+        ORDER BY ts_utc ASC
+    </select>
+
+    <select id="countForceOrders" resultType="int">
+        SELECT COUNT(*)
+        FROM f_forceorder
+        WHERE symbol = #{symbol}
+          AND event_utc >= #{from}
+          AND event_utc < #{to}
+    </select>
+
+</mapper>

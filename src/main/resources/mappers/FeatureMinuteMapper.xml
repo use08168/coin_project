@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.team_biance.the_coin_killer.mapper.FeatureMinuteMapper">
+
+    <insert id="upsert" parameterType="com.team_biance.the_coin_killer.model.FeatureMinute">
+        INSERT INTO feature_minute (
+            symbol, ts_utc,
+
+            open_1m, high_1m, low_1m, close_1m, volume_1m, trade_count_1m,
+
+            ret1m_log, ret5m_log, ret15m_log, range_bps_1m,
+
+            rv15m, rv60m,
+
+            vol_z_60m, rvol_tod, avg_trade_size_1m, vwap_gap_bps,
+
+            taker_buy_qty_1m, taker_sell_qty_1m, buy_ratio_1m, cvd_1m, cvd_15m,
+
+            mid_price_1s, spread_bps_1s, depth_bid_sum_top20, depth_ask_sum_top20, imbalance_top20, microprice_gap_bps,
+
+            mark_spot_bps, oi_chg_1m, liq_count_1m
+        ) VALUES (
+            #{symbol}, #{tsUtc},
+
+            #{open1m}, #{high1m}, #{low1m}, #{close1m}, #{volume1m}, #{tradeCount1m},
+
+            #{ret1mLog}, #{ret5mLog}, #{ret15mLog}, #{rangeBps1m},
+
+            #{rv15m}, #{rv60m},
+
+            #{volZ60m}, #{rvolTod}, #{avgTradeSize1m}, #{vwapGapBps},
+
+            #{takerBuyQty1m}, #{takerSellQty1m}, #{buyRatio1m}, #{cvd1m}, #{cvd15m},
+
+            #{midPrice1s}, #{spreadBps1s}, #{depthBidSumTop20}, #{depthAskSumTop20}, #{imbalanceTop20}, #{micropriceGapBps},
+
+            #{markSpotBps}, #{oiChg1m}, #{liqCount1m}
+        )
+        ON DUPLICATE KEY UPDATE
+            open_1m = #{open1m},
+            high_1m = #{high1m},
+            low_1m = #{low1m},
+            close_1m = #{close1m},
+            volume_1m = #{volume1m},
+            trade_count_1m = #{tradeCount1m},
+
+            ret1m_log = #{ret1mLog},
+            ret5m_log = #{ret5mLog},
+            ret15m_log = #{ret15mLog},
+            range_bps_1m = #{rangeBps1m},
+
+            rv15m = #{rv15m},
+            rv60m = #{rv60m},
+
+            vol_z_60m = #{volZ60m},
+            rvol_tod = #{rvolTod},
+            avg_trade_size_1m = #{avgTradeSize1m},
+            vwap_gap_bps = #{vwapGapBps},
+
+            taker_buy_qty_1m = #{takerBuyQty1m},
+            taker_sell_qty_1m = #{takerSellQty1m},
+            buy_ratio_1m = #{buyRatio1m},
+            cvd_1m = #{cvd1m},
+            cvd_15m = #{cvd15m},
+
+            mid_price_1s = #{midPrice1s},
+            spread_bps_1s = #{spreadBps1s},
+            depth_bid_sum_top20 = #{depthBidSumTop20},
+            depth_ask_sum_top20 = #{depthAskSumTop20},
+            imbalance_top20 = #{imbalanceTop20},
+            microprice_gap_bps = #{micropriceGapBps},
+
+            mark_spot_bps = #{markSpotBps},
+            oi_chg_1m = #{oiChg1m},
+            liq_count_1m = #{liqCount1m}
+    </insert>
+
+</mapper>
