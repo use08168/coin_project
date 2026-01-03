@@ -1,0 +1,49 @@
+{
+  "model_version": "lgbm_btcusdt_20260103_1657",
+  "symbol": "BTCUSDT",
+  "days": 1,
+  "horizon": 60,
+  "features": [
+    "open_1m",
+    "high_1m",
+    "low_1m",
+    "close_1m",
+    "volume_1m",
+    "trade_count_1m",
+    "ret1m_log",
+    "ret5m_log",
+    "ret15m_log",
+    "range_bps_1m",
+    "rv15m",
+    "rv60m",
+    "vol_z_60m",
+    "buy_ratio_1m",
+    "cvd_1m",
+    "cvd_15m",
+    "spread_bps",
+    "imbalance_top20",
+    "microprice_gap_bps",
+    "mark_spot_bps",
+    "funding_rate",
+    "vwap_gap_bps",
+    "avg_trade_size_1m",
+    "liq_count_1m"
+  ],
+  "use_optional_features": false,
+  "use_class_weight": true,
+  "class_weight": {
+    "0": 5.9375,
+    "1": 0.5459770114942529
+  },
+  "trained_at_utc": "2026-01-03T16:57:56Z",
+  "best_iteration": 25,
+  "data_info": {
+    "total_rows": 119,
+    "train_rows": 95,
+    "test_rows": 24,
+    "target_distribution": {
+      "1": 108,
+      "0": 11
+    }
+  }
+}

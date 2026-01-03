@@ -155,7 +155,7 @@
 
     async function loadStatus() {
         const symbol = document.getElementById("trainSymbol").value;
-        const res = await fetch(`/api/model/status?symbol=${encodeURIComponent(symbol)}`, {cache:"no-store"});
+        const res = await fetch("/api/model/status?symbol=" + encodeURIComponent(symbol), {cache:"no-store"});
         const data = await res.json();
 
         document.getElementById("stModelPath").textContent = data.modelPath ?? "-";
@@ -188,39 +188,46 @@
             const data = await res.json();
 
             if (data.ok) {
-                box.innerHTML = `
-                  <div class="cardx rounded-3 p-3 ok">
-                    <div class="fw-bold mb-2">학습 성공 ✅</div>
-                    <div class="mono small">modelVersion: ${data.modelVersion}</div>
-                    <div class="mono small">modelPath: ${data.modelPath}</div>
-                    <hr/>
-                    <div class="row g-2">
-                      <div class="col-6 mono">Accuracy</div><div class="col-6 text-end mono">${(data.metrics?.accuracy ?? 0).toFixed(4)}</div>
-                      <div class="col-6 mono">Precision</div><div class="col-6 text-end mono">${(data.metrics?.precision ?? 0).toFixed(4)}</div>
-                      <div class="col-6 mono">Recall</div><div class="col-6 text-end mono">${(data.metrics?.recall ?? 0).toFixed(4)}</div>
-                      <div class="col-6 mono">F1</div><div class="col-6 text-end mono">${(data.metrics?.f1 ?? 0).toFixed(4)}</div>
-                      <div class="col-6 mono">MDA</div><div class="col-6 text-end mono">${(data.metrics?.mda ?? 0).toFixed(4)}</div>
-                      <div class="col-6 mono">Duration</div><div class="col-6 text-end mono">${(data.durationMs/1000).toFixed(2)}s</div>
-                    </div>
-                  </div>`;
+                const acc = (data.metrics?.accuracy ?? 0).toFixed(4);
+                const prec = (data.metrics?.precision ?? 0).toFixed(4);
+                const rec = (data.metrics?.recall ?? 0).toFixed(4);
+                const f1 = (data.metrics?.f1 ?? 0).toFixed(4);
+                const mda = (data.metrics?.mda ?? 0).toFixed(4);
+                const dur = (data.durationMs/1000).toFixed(2);
+                
+                box.innerHTML = 
+                  '<div class="cardx rounded-3 p-3 ok">' +
+                    '<div class="fw-bold mb-2">학습 성공 ✅</div>' +
+                    '<div class="mono small">modelVersion: ' + data.modelVersion + '</div>' +
+                    '<div class="mono small">modelPath: ' + data.modelPath + '</div>' +
+                    '<hr/>' +
+                    '<div class="row g-2">' +
+                      '<div class="col-6 mono">Accuracy</div><div class="col-6 text-end mono">' + acc + '</div>' +
+                      '<div class="col-6 mono">Precision</div><div class="col-6 text-end mono">' + prec + '</div>' +
+                      '<div class="col-6 mono">Recall</div><div class="col-6 text-end mono">' + rec + '</div>' +
+                      '<div class="col-6 mono">F1</div><div class="col-6 text-end mono">' + f1 + '</div>' +
+                      '<div class="col-6 mono">MDA</div><div class="col-6 text-end mono">' + mda + '</div>' +
+                      '<div class="col-6 mono">Duration</div><div class="col-6 text-end mono">' + dur + 's</div>' +
+                    '</div>' +
+                  '</div>';
             } else {
-                box.innerHTML = `
-                  <div class="cardx rounded-3 p-3 bad">
-                    <div class="fw-bold mb-2">학습 실패 ❌</div>
-                    <div class="mono small">code: ${data.errorCode ?? "-"}</div>
-                    <div class="mono small">message: ${data.errorMessage ?? "-"}</div>
-                  </div>`;
+                box.innerHTML = 
+                  '<div class="cardx rounded-3 p-3 bad">' +
+                    '<div class="fw-bold mb-2">학습 실패 ❌</div>' +
+                    '<div class="mono small">code: ' + (data.errorCode ?? "-") + '</div>' +
+                    '<div class="mono small">message: ' + (data.errorMessage ?? "-") + '</div>' +
+                  '</div>';
             }
 
             flash(box);
             await loadStatus();
 
         } catch (e) {
-            box.innerHTML = `
-              <div class="cardx rounded-3 p-3 bad">
-                <div class="fw-bold mb-2">학습 호출 오류 ❌</div>
-                <div class="mono small">${e}</div>
-              </div>`;
+            box.innerHTML = 
+              '<div class="cardx rounded-3 p-3 bad">' +
+                '<div class="fw-bold mb-2">학습 호출 오류 ❌</div>' +
+                '<div class="mono small">' + e + '</div>' +
+              '</div>';
             flash(box);
         } finally {
             setLoading("btnTrain","trainSpinner", false);
@@ -247,37 +254,41 @@
                 const up = data.prediction === 1;
                 const emoji = up ? "📈" : "📉";
                 const cls = up ? "ok" : "warn";
-                box.innerHTML = `
-                  <div class="cardx rounded-3 p-3 ${cls}">
-                    <div class="fw-bold mb-2">예측 결과 ${emoji}</div>
-                    <div class="mono small">ts_utc: ${data.timestamp}</div>
-                    <div class="mono small">model: ${data.modelVersion}</div>
-                    <hr/>
-                    <div class="row g-2">
-                      <div class="col-6 mono">Current Close</div><div class="col-6 text-end mono">$${fmtPrice(data.currentClose)}</div>
-                      <div class="col-6 mono">Prediction</div><div class="col-6 text-end mono">${data.predictionLabel} (${fmtProb(data.probability)})</div>
-                      <div class="col-6 mono">Duration</div><div class="col-6 text-end mono">${(data.durationMs/1000).toFixed(2)}s</div>
-                    </div>
-                    ${(data.errorCode === "DB_INSERT_FAILED") ? `<div class="mt-2 text-warning mono small">⚠ DB 저장 실패: ${data.errorMessage}</div>` : ``}
-                  </div>`;
+                const dbWarn = (data.errorCode === "DB_INSERT_FAILED") 
+                    ? '<div class="mt-2 text-warning mono small">⚠ DB 저장 실패: ' + data.errorMessage + '</div>' 
+                    : '';
+                
+                box.innerHTML = 
+                  '<div class="cardx rounded-3 p-3 ' + cls + '">' +
+                    '<div class="fw-bold mb-2">예측 결과 ' + emoji + '</div>' +
+                    '<div class="mono small">ts_utc: ' + data.timestamp + '</div>' +
+                    '<div class="mono small">model: ' + data.modelVersion + '</div>' +
+                    '<hr/>' +
+                    '<div class="row g-2">' +
+                      '<div class="col-6 mono">Current Close</div><div class="col-6 text-end mono">$' + fmtPrice(data.currentClose) + '</div>' +
+                      '<div class="col-6 mono">Prediction</div><div class="col-6 text-end mono">' + data.predictionLabel + ' (' + fmtProb(data.probability) + ')</div>' +
+                      '<div class="col-6 mono">Duration</div><div class="col-6 text-end mono">' + (data.durationMs/1000).toFixed(2) + 's</div>' +
+                    '</div>' +
+                    dbWarn +
+                  '</div>';
             } else {
-                box.innerHTML = `
-                  <div class="cardx rounded-3 p-3 bad">
-                    <div class="fw-bold mb-2">예측 실패 ❌</div>
-                    <div class="mono small">code: ${data.errorCode ?? "-"}</div>
-                    <div class="mono small">message: ${data.errorMessage ?? "-"}</div>
-                  </div>`;
+                box.innerHTML = 
+                  '<div class="cardx rounded-3 p-3 bad">' +
+                    '<div class="fw-bold mb-2">예측 실패 ❌</div>' +
+                    '<div class="mono small">code: ' + (data.errorCode ?? "-") + '</div>' +
+                    '<div class="mono small">message: ' + (data.errorMessage ?? "-") + '</div>' +
+                  '</div>';
             }
 
             flash(box);
             await loadPredictions();
 
         } catch (e) {
-            box.innerHTML = `
-              <div class="cardx rounded-3 p-3 bad">
-                <div class="fw-bold mb-2">예측 호출 오류 ❌</div>
-                <div class="mono small">${e}</div>
-              </div>`;
+            box.innerHTML = 
+              '<div class="cardx rounded-3 p-3 bad">' +
+                '<div class="fw-bold mb-2">예측 호출 오류 ❌</div>' +
+                '<div class="mono small">' + e + '</div>' +
+              '</div>';
             flash(box);
         } finally {
             setLoading("btnPredict","predSpinner", false);
@@ -286,28 +297,30 @@
 
     async function loadPredictions() {
         const symbol = document.getElementById("predSymbol").value;
-        const res = await fetch(`/api/model/predictions?symbol=${encodeURIComponent(symbol)}&limit=10`, {cache:"no-store"});
+        const res = await fetch("/api/model/predictions?symbol=" + encodeURIComponent(symbol) + "&limit=10", {cache:"no-store"});
         const rows = await res.json();
 
         const tbody = document.getElementById("predTableBody");
         if (!rows || rows.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" class="muted">데이터 없음</td></tr>`;
+            tbody.innerHTML = '<tr><td colspan="5" class="muted">데이터 없음</td></tr>';
             return;
         }
 
-        tbody.innerHTML = rows.map(r => {
+        let html = '';
+        for (let i = 0; i < rows.length; i++) {
+            const r = rows[i];
             const up = (r.prediction === 1);
             const badge = up ? "text-bg-success" : "text-bg-warning";
             const label = up ? "UP" : "DOWN";
-            return `
-              <tr>
-                <td class="mono">${r.tsUtc ?? "-"}</td>
-                <td class="mono text-end">$${fmtPrice(r.currentClose)}</td>
-                <td class="text-center"><span class="badge ${badge} mono">${label}</span></td>
-                <td class="mono text-end">${fmtProb(r.probability)}</td>
-                <td class="mono">${r.modelVersion ?? "-"}</td>
-              </tr>`;
-        }).join("");
+            html += '<tr>' +
+                '<td class="mono">' + (r.tsUtc ?? "-") + '</td>' +
+                '<td class="mono text-end">$' + fmtPrice(r.currentClose) + '</td>' +
+                '<td class="text-center"><span class="badge ' + badge + ' mono">' + label + '</span></td>' +
+                '<td class="mono text-end">' + fmtProb(r.probability) + '</td>' +
+                '<td class="mono">' + (r.modelVersion ?? "-") + '</td>' +
+              '</tr>';
+        }
+        tbody.innerHTML = html;
 
         flash(tbody);
     }

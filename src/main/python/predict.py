@@ -1,3 +1,8 @@
+"""
+predict.py - 실시간 예측 (LAG 적용된 데이터 사용)
+
+핵심: data_loader.load_latest_for_prediction() 사용 (LAG 적용)
+"""
 from __future__ import annotations
 
 import argparse
@@ -8,8 +13,8 @@ import joblib
 import numpy as np
 import pandas as pd
 
-from data_loader import load_latest_feature_window, load_latest_close
-from feature_engineer import add_optional_features, get_feature_columns
+from data_loader import load_latest_for_prediction, load_latest_close
+from feature_engineer import prepare_x_for_prediction, get_feature_columns
 from utils import log, json_stdout, error_json, exception_to_detail
 
 
@@ -30,9 +35,14 @@ def main():
         use_optional = bool(pack.get("use_optional_features", False))
         feats = pack.get("features") or get_feature_columns(use_optional)
 
-        # 예측용: 최신 60분 데이터 로드 (옵션 피처(ret60m) 계산하려면 60 이상이 필요)
-        df = load_latest_feature_window(args.symbol, minutes=60 if not use_optional else 120)
-        if df.empty or len(df) < 60:
+        log(f"[PREDICT] Loaded model: {model_version}")
+        log(f"[PREDICT] Features: {len(feats)}")
+
+        # ★ LAG 적용된 데이터 로드
+        log(f"[PREDICT] Loading latest data with LAG applied...")
+        df = load_latest_for_prediction(args.symbol, minutes=180)  # 3시간 (warmup + 여유)
+        
+        if df.empty or len(df) < 10:
             error_json(
                 "DATA_INSUFFICIENT",
                 f"not enough recent rows for prediction. rows={len(df)}",
@@ -40,39 +50,38 @@ def main():
             )
             return
 
-        # 최신 시점(마지막 row)으로 예측
-        df2 = add_optional_features(df, enable=use_optional)
-        df2 = df2.replace([np.inf, -np.inf], np.nan)
+        log(f"[PREDICT] Loaded {len(df)} rows")
 
-        # 마지막 행을 feature로 사용
-        last = df2.iloc[-1].copy()
-
-        missing = [c for c in feats if c not in df2.columns]
+        # 예측용 X 준비
+        X, meta = prepare_x_for_prediction(df, use_optional=use_optional)
+        
+        # 결측 컬럼 확인
+        missing = [c for c in feats if c not in X.columns]
         if missing:
-            error_json("FEATURE_MISSING", f"missing feature columns: {missing}", extra={"missing": missing})
-            return
+            log(f"[PREDICT] Warning: Missing columns will be filled with 0: {missing}")
+            for col in missing:
+                X[col] = 0.0
+        
+        # Feature 순서 맞추기
+        X = X[feats]
 
-        x = pd.DataFrame([last[feats].to_dict()])
-
-        # 결측은 간단히 0으로 채우고 시작 (훈련에서도 dropna 했으니, 실전에서는 더 엄격히 해도 됨)
-        x = x.fillna(0.0)
-
-        proba = float(model.predict_proba(x)[:, 1][0])
+        # 예측
+        proba = float(model.predict_proba(X)[:, 1][0])
         pred = int(proba >= 0.5)
         label = "UP" if pred == 1 else "DOWN"
 
-        # current close
+        log(f"[PREDICT] Prediction: {label} ({proba:.4f})")
+
+        # 현재 가격
         latest_close = load_latest_close(args.symbol)
         if latest_close:
             close_ts, current_close = latest_close
         else:
-            close_ts = last.get("ts_utc")
-            if hasattr(close_ts, "to_pydatetime"):
-                close_ts = close_ts.to_pydatetime()
-            current_close = float(last.get("close_1m", 0.0))
+            close_ts = meta.get("ts_utc")
+            current_close = meta.get("close_now", 0.0)
 
-        # timestamp는 "예측 기준 시각" (마지막 feature ts)
-        ts = last.get("ts_utc")
+        # timestamp
+        ts = meta.get("ts_utc")
         if hasattr(ts, "to_pydatetime"):
             ts = ts.to_pydatetime()
         if ts is None:
@@ -81,6 +90,7 @@ def main():
             ts = ts.replace(tzinfo=timezone.utc)
 
         json_stdout({
+            "ok": True,
             "symbol": args.symbol,
             "timestamp": ts.replace(microsecond=0).isoformat().replace("+00:00", "Z"),
             "current_close": float(current_close),
@@ -89,7 +99,6 @@ def main():
             "probability": proba,
             "model_version": model_version,
             "features_used": int(len(feats)),
-            "ok": True
         })
 
     except Exception as e:

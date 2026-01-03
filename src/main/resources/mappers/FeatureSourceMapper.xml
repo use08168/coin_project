@@ -5,7 +5,6 @@
 
 <mapper namespace="com.team_biance.the_coin_killer.mapper.FeatureSourceMapper">
 
-    <!-- f_kline_1m: FKline1m(open/high/low/close/volume/tradeCount...)에 맞게 alias -->
     <select id="getKlineAt" resultType="com.team_biance.the_coin_killer.model.FKline1m">
         SELECT
             symbol,
@@ -26,6 +25,7 @@
     </select>
 
     <select id="getKlineRange" resultType="com.team_biance.the_coin_killer.model.FKline1m">
+        <![CDATA[
         SELECT
             symbol,
             ts_utc AS tsUtc,
@@ -43,10 +43,11 @@
           AND ts_utc >= #{from}
           AND ts_utc < #{to}
         ORDER BY ts_utc ASC
+        ]]>
     </select>
 
-    <!-- depth: 해당 시각(beforeTs) 이전 가장 최신 1건 -->
     <select id="getLatestDepthBefore" resultType="com.team_biance.the_coin_killer.model.FDepthSnapshot1s">
+        <![CDATA[
         SELECT
             symbol,
             ts_utc AS tsUtc,
@@ -64,10 +65,11 @@
           AND ts_utc < #{beforeTs}
         ORDER BY ts_utc DESC
         LIMIT 1
+        ]]>
     </select>
 
-    <!-- mark: 해당 시각(beforeTs) 이전 가장 최신 1건 -->
     <select id="getLatestMarkBefore" resultType="com.team_biance.the_coin_killer.model.FMark1s">
+        <![CDATA[
         SELECT
             symbol,
             ts_utc AS tsUtc,
@@ -80,6 +82,7 @@
           AND ts_utc < #{beforeTs}
         ORDER BY ts_utc DESC
         LIMIT 1
+        ]]>
     </select>
 
     <select id="getAggTradeAt" resultType="com.team_biance.the_coin_killer.model.FAggTrade1m">
@@ -97,6 +100,7 @@
     </select>
 
     <select id="getAggTradeRange" resultType="com.team_biance.the_coin_killer.model.FAggTrade1m">
+        <![CDATA[
         SELECT
             symbol,
             ts_utc AS tsUtc,
@@ -109,14 +113,17 @@
           AND ts_utc >= #{from}
           AND ts_utc < #{to}
         ORDER BY ts_utc ASC
+        ]]>
     </select>
 
     <select id="countForceOrders" resultType="int">
+        <![CDATA[
         SELECT COUNT(*)
         FROM f_forceorder
         WHERE symbol = #{symbol}
           AND event_utc >= #{from}
           AND event_utc < #{to}
+        ]]>
     </select>
 
 </mapper>
